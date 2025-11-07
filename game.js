@@ -1,4 +1,4 @@
-$(() => {
+document.addEventListener('DOMContentLoaded', () => {
    const gp = navigator.getGamepads()[0];
    
    // Game state
@@ -50,18 +50,18 @@ $(() => {
       invcount = checkInvaders();
    }
 
-   $(window).resize(() => {
+   window.addEventListener('resize', () => {
       get_coordinates();
    });
 
    const keys = {};
 
-   $(document).keydown((e) => {
+   document.addEventListener('keydown', (e) => {
       keys[e.which] = true;
       processKeys(keys);
    });
 
-   $(document).keyup((e) => {
+   document.addEventListener('keyup', (e) => {
       delete keys[e.which];
    });
 
@@ -79,7 +79,7 @@ $(() => {
       1&nbsp;&nbsp;&nbsp;OR&nbsp;&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;&nbsp;PLAYERS&nbsp;&nbsp;&nbsp;&nbsp;BUTTON
     </div>
   `;
-      $(".container").append(html);
+      document.querySelector('.container').insertAdjacentHTML('beforeend', html);
    };
 
    const processKeys = (keys) => {
@@ -95,7 +95,9 @@ $(() => {
    };
 
    const playGame = (plyr) => {
-      $(".intro-text").hide();
+      const introText = document.querySelector('.intro-text');
+      if (introText) introText.style.display = 'none';
+      
       player = 1;
       playerNo = plyr;
       draw_screen();
@@ -132,100 +134,120 @@ $(() => {
    const move_left = () => {
       if (tankpos > pad) {
          tankpos -= 5;
-         tank.css("left", `${tankpos}px`);
+         tank.style.left = `${tankpos}px`;
       }
    };
 
    const move_right = () => {
       if (tankpos < screenright - pad - 44) {
          tankpos += 5;
-         tank.css("left", `${tankpos}px`);
+         tank.style.left = `${tankpos}px`;
       }
    };
 
    const shoot_missile = () => {
       shot = true;
       missileposX = tankpos + 22;
-      missileposY = parseInt($(".tank-wrapper").css("top"));
+      const tankWrapper = document.querySelector('.tank-wrapper');
+      missileposY = parseInt(getComputedStyle(tankWrapper).top);
       play_sound("shoot");
-      missile.css("top", `${missileposY}px`);
-      missile.css("left", `${missileposX}px`);
-      missile.show();
+      missile.style.top = `${missileposY}px`;
+      missile.style.left = `${missileposX}px`;
+      missile.style.display = 'inline-block';
+   };
+
+   const getOffset = (el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+         left: rect.left + window.scrollX,
+         top: rect.top + window.scrollY
+      };
    };
 
    const checkcollision = (div1, div2) => {
-      const x1 = div1.offset().left,
-         y1 = div1.offset().top,
-         h1 = div1.outerHeight(true),
-         w1 = div1.outerWidth(true),
-         x2 = div2.offset().left,
-         y2 = div2.offset().top,
-         h2 = div2.outerHeight(true),
-         w2 = div2.outerWidth(true),
-         b1 = y1 + h1,
-         r1 = x1 + w1,
-         b2 = y2 + h2,
-         r2 = x2 + w2;
-      return !(b1 < y2 || y1 > b2 || r1 < x2 || x1 > r2);
+      const rect1 = div1.getBoundingClientRect();
+      const rect2 = div2.getBoundingClientRect();
+      
+      return !(rect1.bottom < rect2.top || 
+               rect1.top > rect2.bottom || 
+               rect1.right < rect2.left || 
+               rect1.left > rect2.right);
    };
 
    const trimTable = () => {
+      const invadersEl = document.querySelector('#invaders');
+      if (!invadersEl) return;
+      
+      const table = invadersEl.querySelector('table');
+      if (!table) return;
+      
       // Check bottom row
-      const btmRow = $("#invaders table tr:last-child");
-      const width = btmRow.find("div").length;
-      const empty = btmRow.find("div.empty").length;
-      if (empty === width) {
+      const rows = table.querySelectorAll('tr');
+      const btmRow = rows[rows.length - 1];
+      const divs = btmRow.querySelectorAll('div');
+      const emptyDivs = btmRow.querySelectorAll('div.empty');
+      
+      if (divs.length === emptyDivs.length) {
          btmRow.remove();
       }
 
-      // Check left column row
+      // Check left column
       let check = true;
-      $("#invaders table tr td:first-child").each(function () {
-         if (!$(this).find("div").hasClass("empty")) {
+      const allRows = table.querySelectorAll('tr');
+      allRows.forEach(row => {
+         const firstCell = row.querySelector('td:first-child');
+         if (firstCell && !firstCell.querySelector('div').classList.contains('empty')) {
             check = false;
-            return false;
          }
       });
 
       if (check) {
-         $("#invaders table tr td:first-child").each(function () {
-            $(this).empty().remove();
+         allRows.forEach(row => {
+            const firstCell = row.querySelector('td:first-child');
+            if (firstCell) firstCell.remove();
          });
-         const left = `${$("#invaders").position().left + $("#invaders table td").width()}px`;
-         $("#invaders").css("left", left);
+         const firstTd = table.querySelector('td');
+         if (firstTd) {
+            const tdWidth = firstTd.offsetWidth;
+            const currentLeft = invadersEl.offsetLeft;
+            invadersEl.style.left = `${currentLeft + tdWidth}px`;
+         }
       }
 
-      // Check right column row
+      // Check right column
       check = true;
-      $("#invaders table tr td:last-child").each(function () {
-         if (!$(this).find("div").hasClass("empty")) {
+      const allRows2 = table.querySelectorAll('tr');
+      allRows2.forEach(row => {
+         const lastCell = row.querySelector('td:last-child');
+         if (lastCell && !lastCell.querySelector('div').classList.contains('empty')) {
             check = false;
-            return false;
          }
       });
 
       if (check) {
-         $("#invaders table tr td:last-child").each(function () {
-            $(this).empty().remove();
+         allRows2.forEach(row => {
+            const lastCell = row.querySelector('td:last-child');
+            if (lastCell) lastCell.remove();
          });
       }
    };
 
    const move_spaceship = () => {
       if (!ship_hit) {
-         if (space_ship.is(":hidden")) {
+         const isHidden = getComputedStyle(space_ship).display === 'none';
+         if (isHidden) {
             rand = Math.round(Math.random() * 500) + 1;
             if (rand < 2) {
-               space_ship.show();
+               space_ship.style.display = 'inline-block';
             }
          } else {
             play_sound("ship1");
-            currentPos = parseInt(space_ship.css("left"));
+            currentPos = parseInt(getComputedStyle(space_ship).left);
             currentPos += 1;
-            space_ship.css("left", currentPos);
+            space_ship.style.left = `${currentPos}px`;
             if (currentPos > screenright - 10) {
-               space_ship.hide();
-               space_ship.css("left", "-50px");
+               space_ship.style.display = 'none';
+               space_ship.style.left = "-50px";
             }
          }
       }
@@ -233,26 +255,26 @@ $(() => {
 
    const move_missile = () => {
       missileposY -= 5;
-      missile.css("top", `${missileposY}px`);
+      missile.style.top = `${missileposY}px`;
       
       if (checkcollision(missile, invaders)) {
-         $('#invaders .space-invader:not(".empty")').each(function () {
-            if (checkcollision($(this), missile)) {
+         const spaceInvaders = invaders.querySelectorAll('.space-invader:not(.empty)');
+         spaceInvaders.forEach(invader => {
+            if (checkcollision(invader, missile)) {
                play_sound("kill");
-               td = $(this).parent("td");
-               td.html('<div class="space-invader explosion"></div>');
+               td = invader.parentElement;
+               td.innerHTML = '<div class="space-invader explosion"></div>';
                shot = false;
-               missile.hide();
-               update_score(player, $(this));
-               $(this)
-                  .delay(100)
-                  .queue(function () {
-                     td.html('<div class="space-invader empty"></div>');
-                     trimTable();
-                     trimTable();
-                     trimTable();
-                     $(this).dequeue();
-                  });
+               missile.style.display = 'none';
+               update_score(player, invader);
+               
+               setTimeout(() => {
+                  td.innerHTML = '<div class="space-invader empty"></div>';
+                  trimTable();
+                  trimTable();
+                  trimTable();
+               }, 100);
+               
                if (invcount === 0) {
                   end_game();
                   return false;
@@ -261,42 +283,47 @@ $(() => {
          });
       }
       
-      if (!missile.is(":hidden") && checkcollision(missile, space_ship)) {
+      const missileHidden = getComputedStyle(missile).display === 'none';
+      if (!missileHidden && checkcollision(missile, space_ship)) {
          play_sound("kill");
          shot = false;
          ship_hit = true;
-         missile.hide();
+         missile.style.display = 'none';
          update_score(player, 500 * level);
-         space_ship.css("background-size", "0 0");
-         space_ship.text(500 * level);
-         space_ship.delay(500).queue(function () {
-            space_ship.css("left", "-50px");
-            space_ship.text("");
-            space_ship.css("background-size", "initial");
-            space_ship.dequeue();
-            space_ship.hide();
+         space_ship.style.backgroundSize = "0 0";
+         space_ship.textContent = 500 * level;
+         
+         setTimeout(() => {
+            space_ship.style.left = "-50px";
+            space_ship.textContent = "";
+            space_ship.style.backgroundSize = "initial";
+            space_ship.style.display = 'none';
             ship_hit = false;
-         });
+         }, 500);
       }
 
-      if (missileposY < parseInt($(".scores").height()) - 5) {
-         missile.hide();
+      const scoresEl = document.querySelector('.scores');
+      if (scoresEl && missileposY < parseInt(getComputedStyle(scoresEl).height) - 5) {
+         missile.style.display = 'none';
          shot = false;
       }
    };
 
    const play_sound = (snd) => {
       if (!mute) {
-         const aud = $(`#${snd}`)[0];
-         $(`#${snd}`).prop("volume", vol);
-         aud.play();
+         const aud = document.getElementById(snd);
+         if (aud) {
+            aud.volume = vol;
+            aud.play();
+         }
       }
    };
 
    const update_score = (p, obj) => {
       if (typeof obj === "object") {
-         $.each(["b1", "b2", "m1", "m2", "t1", "t2"], (idx, value) => {
-            if (obj.hasClass(value)) {
+         const classes = ["b1", "b2", "m1", "m2", "t1", "t2"];
+         classes.forEach((value, idx) => {
+            if (obj.classList.contains(value)) {
                score[p] += (parseInt(idx / 2) + 1) * 10;
                return false;
             }
@@ -304,13 +331,18 @@ $(() => {
       } else {
          score[p] += obj;
       }
-      $(`#score${p}`).text(padscore(score[p]));
+      
+      const scoreEl = document.getElementById(`score${p}`);
+      if (scoreEl) scoreEl.textContent = padscore(score[p]);
+      
       hiscore += score[p] < hiscore ? 0 : score[p] - hiscore;
-      $("#hiscore").text(padscore(hiscore));
+      const hiscoreEl = document.getElementById('hiscore');
+      if (hiscoreEl) hiscoreEl.textContent = padscore(hiscore);
    };
 
    const checkInvaders = () => {
-      return invaders.children("table").children("tbody").children("tr").children("td").children('div:not(".empty")').length;
+      if (!invaders) return 0;
+      return invaders.querySelectorAll('div:not(.empty)').length;
    };
 
    const end_game = () => {
@@ -319,15 +351,20 @@ $(() => {
    };
 
    const move_invaders = () => {
-      if (invtop + invheight > parseInt($(".footer").css("top")) - 15) {
+      const footer = document.querySelector('.footer');
+      const footerTop = footer ? parseInt(getComputedStyle(footer).top) : 0;
+      
+      if (invtop + invheight > footerTop - 15) {
          end_game();
          return false;
       }
+      
       sign = dir === "ltr" ? 1 : -1;
       get_coordinates();
-      invaders.css("left", `${invleft + 5 * sign}px`);
+      invaders.style.left = `${invleft + 5 * sign}px`;
       toggle();
       get_coordinates();
+      
       if (invleft + invwidth > screenright - 10 && dir === "ltr") {
          dir = "rtl";
          down_one();
@@ -340,22 +377,32 @@ $(() => {
    };
 
    const down_one = () => {
-      invaders.css("top", `${parseInt(invaders.css("top")) + 30}px`);
+      const currentTop = parseInt(getComputedStyle(invaders).top);
+      invaders.style.top = `${currentTop + 30}px`;
    };
 
    const toggle = () => {
       const oldphase = phase;
       phase = phase === 1 ? 2 : 1;
       play_sound(`inv${phase}`);
-      $("div[class*='space-invader t']:not('.tank')")
-         .removeClass(`t${oldphase}`)
-         .addClass(`t${phase}`);
-      $("div[class*='space-invader m']")
-         .removeClass(`m${oldphase}`)
-         .addClass(`m${phase}`);
-      $("div[class*='space-invader b']")
-         .removeClass(`b${oldphase}`)
-         .addClass(`b${phase}`);
+      
+      const topInvaders = document.querySelectorAll("div[class*='space-invader t']:not(.tank)");
+      topInvaders.forEach(inv => {
+         inv.classList.remove(`t${oldphase}`);
+         inv.classList.add(`t${phase}`);
+      });
+      
+      const midInvaders = document.querySelectorAll("div[class*='space-invader m']");
+      midInvaders.forEach(inv => {
+         inv.classList.remove(`m${oldphase}`);
+         inv.classList.add(`m${phase}`);
+      });
+      
+      const botInvaders = document.querySelectorAll("div[class*='space-invader b']");
+      botInvaders.forEach(inv => {
+         inv.classList.remove(`b${oldphase}`);
+         inv.classList.add(`b${phase}`);
+      });
    };
 
    const padscore = (str) => {
@@ -364,16 +411,23 @@ $(() => {
    };
 
    const get_coordinates = () => {
-      invtop = invaders.position().top;
-      invheight = parseInt(invaders.height());
-      invwidth = parseInt(invaders.width());
-      invleft = invaders.position().left;
-      screenright = $(".container").width();
-      screenheight = $(".container").height();
-      pad = parseInt($(".container").css("padding"));
+      if (!invaders) return;
+      
+      const invRect = invaders.getBoundingClientRect();
+      invtop = invRect.top + window.scrollY;
+      invheight = invaders.offsetHeight;
+      invwidth = invaders.offsetWidth;
+      invleft = invRect.left + window.scrollX;
+      
+      const container = document.querySelector('.container');
+      screenright = container.offsetWidth;
+      screenheight = container.offsetHeight;
+      pad = parseInt(getComputedStyle(container).padding);
    };
 
    const draw_screen = () => {
+      const container = document.querySelector('.container');
+      
       const scores = `
          <table class="scores">
             <tr>
@@ -391,19 +445,24 @@ $(() => {
       if (player === 0) {
          startScreen();
       } else {
-         $(".container").append(scores);
-         $(".container").append('<div id="invaders"></div>');
-         $(".container").append('<div class="space-invader missile"></div>');
-         $(".container").append('<div class="space-invader space-ship"></div>');
+         container.insertAdjacentHTML('beforeend', scores);
+         container.insertAdjacentHTML('beforeend', '<div id="invaders"></div>');
+         container.insertAdjacentHTML('beforeend', '<div class="space-invader missile"></div>');
+         container.insertAdjacentHTML('beforeend', '<div class="space-invader space-ship"></div>');
 
-         missile = $(".space-invader.missile").hide();
-         space_ship = $(".space-invader.space-ship").hide();
-         invaders = $("#invaders");
+         missile = document.querySelector('.space-invader.missile');
+         missile.style.display = 'none';
+         
+         space_ship = document.querySelector('.space-invader.space-ship');
+         space_ship.style.display = 'none';
+         
+         invaders = document.getElementById('invaders');
          
          const rows = [`t${phase}`, `m${phase}`, `m${phase}`, `b${phase}`, `b${phase}`];
-         invaders.empty();
+         invaders.innerHTML = '';
+         
          let inv = "<table><tbody>";
-         $.each(rows, (key, value) => {
+         rows.forEach(value => {
             inv += "<tr>";
             for (let col = 0; col < 11; col++) {
                inv += `<td><div class="space-invader ${value}"></div></td>`;
@@ -411,12 +470,14 @@ $(() => {
             inv += "</tr>";
          });
          inv += "</tbody></table>";
-         invaders.html(inv);
-         $(".container").append(
+         invaders.innerHTML = inv;
+         
+         container.insertAdjacentHTML('beforeend',
             '<table class="bunker-wrapper"><tr><td><div class="space-invader bunker"></div><td><td><div class="space-invader bunker"></div><td><td><div class="space-invader bunker"></div><td><td><div class="space-invader bunker"></div><td></tr></table>'
          );
-         $(".container").append('<div class="tank-wrapper"><div class="space-invader tank"></div></div><div class="footer"></div>');
-         tank = $(".space-invader.tank");
+         container.insertAdjacentHTML('beforeend', '<div class="tank-wrapper"><div class="space-invader tank"></div></div><div class="footer"></div>');
+         
+         tank = document.querySelector('.space-invader.tank');
       }
    };
 
